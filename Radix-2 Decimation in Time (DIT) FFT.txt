@@ -1,0 +1,57 @@
+%% Radix-2 Decimation in Time (DIT) FFT
+clear; close all; clc; 
+% Input sequence (N = 2^p)
+x = [1 2 3 4 5 6 7 8]; 
+N = length(x); 
+% Custom DIT FFT
+X_custom = myFFT_DIT(x); 
+% Inbuilt fft verification
+X_builtin = fft(x); 
+% Display final comparison
+disp('Custom DIT-FFT vs MATLAB fft():'); 
+disp([ (0:N-1).' X_custom(:) X_builtin(:) ]); 
+% Custom DIT IFFT
+x_custom = myFFT_DIT(conj(X_custom))/N; 
+disp('Original Sequence vs Recovered Sequence:'); 
+disp([ (0:N-1).' x(:) x_custom(:)]); 
+% Plot magnitude and phase spectra 
+k = 0:N-1; 
+figure(1); 
+subplot(2,1,1); stem(k, abs(X_custom), 'filled'); 
+xlabel('k'); ylabel('|X[k]|'); 
+title('Magnitude Spectrum'); grid on; 
+subplot(2,1,2); stem(k, angle(X_custom), 'filled'); 
+xlabel('k'); ylabel('\angleX[k] (radians)'); 
+title('Phase Spectrum'); grid on; 
+%% Custom Radix-2 DIT-FFT Function 
+function X = myFFT_DIT(x) 
+x = x(:); % Make column vector 
+N_total = length(x); 
+% Input validation
+if rem(log2(N_total),1) ~= 0 
+    error('Input length N must be a power of 2.'); 
+end 
+% Bit-reversal ordering 
+x = x(bitrevorder(1:N_total)); 
+disp('Bit-reversed input:'); 
+disp(x.'); 
+% Stage-wise FFT computation 
+numStages = log2(N_total); 
+for stage = 1:numStages 
+    N = 2^stage; % FFT length for this stage 
+    Nby2 = N/2; 
+    twiddle = exp(-1j * 2 * pi * (0:Nby2-1).' / N); 
+    for startIdx = 1:N:N_total 
+        idx = startIdx:(startIdx + Nby2 - 1); 
+        top = x(idx); 
+        bottom = x(idx + Nby2); 
+        temp = twiddle .* bottom; 
+        x(idx) = top + temp; 
+        x(idx + Nby2) = top - temp; 
+    end 
+    fprintf('\nAfter Stage %d (N = %d):\n', stage, N); 
+    disp(x.'); 
+end 
+X = x; % Final FFT output 
+end
+

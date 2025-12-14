@@ -1,0 +1,60 @@
+%% Radix-2 Decimation in Frequency (DIF) FFT 
+clear; close all; clc;
+% Input sequence (N = 2^p)
+x = [1 2 3 4 5 6 7 8];
+N = length(x);
+% Custom DIF FFT
+X_custom = myFFT_DIF(x);
+% Inbuilt fft verification
+X_builtin = fft(x);
+% Bit-reverse reorder DIF output
+X_custom_ordered = X_custom(bitrevorder(1:N));
+% Display final comparison
+disp('Comparison: Custom DIF-FFT vs MATLAB fft():');
+disp([ (0:N-1).'  X_custom_ordered(:)  X_builtin(:) ]);
+% Custom DIF IFFT
+x_custom = myFFT_DIF(conj(X_custom_ordered))/N; 
+x_custom_ordered = x_custom(bitrevorder(1:N));
+disp('Original Sequence vs Recovered Sequence:'); 
+disp([ (0:N-1).' x(:) x_custom_ordered(:)]); 
+% Plot magnitude and phase spectra
+k = 0:N-1;
+figure('Name','Custom DIF-FFT','NumberTitle','off');
+subplot(2,1,1);
+stem(k, abs(X_custom_ordered), 'filled');
+xlabel('k'); ylabel('|X[k]|');
+title('Magnitude Spectrum');
+grid on;
+subplot(2,1,2);
+stem(k, angle(X_custom_ordered), 'filled');
+xlabel('k'); ylabel('∠X[k] (radians)');
+title('Phase Spectrum');
+grid on;
+%% Custom Radix-2 DIF-FFT Function
+function X = myFFT_DIF(x)
+x = x(:); % Make column vector
+N_total = length(x);
+if rem(log2(N_total),1) ~= 0
+    error('Input length N must be a power of 2.');
+end
+disp('Initial input sequence:');
+disp(x.');
+numStages = log2(N_total);
+for stage = 1:numStages
+    N = 2^(numStages - stage + 1);   % Current FFT length
+    Nby2 = N/2;
+    twiddle = exp(-1j * 2 * pi * (0:Nby2-1).' / N);
+    for startIdx = 1:N:N_total
+        idx = startIdx:(startIdx + Nby2 - 1);
+        top = x(idx);
+        bottom = x(idx + Nby2);  
+        % DIF butterfly
+        x(idx) = top + bottom; % Sum part
+        x(idx + Nby2) = (top - bottom) .* twiddle; % Difference * twiddle
+    end
+    fprintf('\nAfter Stage %d (N = %d):\n', stage, N);
+    disp(x.');
+end
+X = x;   % Output is in bit-reversed order
+end
+

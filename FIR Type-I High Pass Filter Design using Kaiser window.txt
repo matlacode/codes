@@ -1,0 +1,88 @@
+%% FIR Type-I High Pass Filter Design using Kaiser window
+% Kaiser window is a generalized window that includes -
+% rectangular to Blackman window
+clearvars; close all; clc;
+%% Filter specifications:
+fs = 16000; % Sampling frequency (Hz)
+fpass = 5000; % Passband edge (Hz)
+fstop = 2000; % Stopband edge (Hz)
+As = 40; % Stopband attenuation (dB)
+%% Input validation
+if fpass <= fstop
+    error('For High-pass filter, fpass must be > fstop.');
+end
+%% Digital specifications:
+wp = 2*pi*fpass/fs;
+ws = 2*pi*fstop/fs;
+delta_omega = wp - ws; % Transition width
+%% Kaiser window parameters
+if As > 50
+    beta = 0.1102*(As - 8.7);
+elseif As >= 21
+    beta = 0.5842*(As - 21)^0.4 + 0.07886*(As - 21);
+else
+    beta = 0;
+end
+% Estimation of filter length:
+M = ceil((As - 8) / (2.285 * delta_omega));
+if rem(M,2)==0, M = M + 1; end
+w = kaiser(M, beta)';
+fprintf('HPF Specs:\n');
+fprintf('fs = %d Hz, fpass = %d Hz, fstop = %d Hz\n', fs, fpass, fstop);
+fprintf('A_s = %.2f dB, Kaiser beta = %.3f, M = %d\n', As, beta, M);
+%% Ideal impulse response
+N = M - 1; n = 0:N; alpha = N/2;
+wc = wp - delta_omega/2; % cutoff
+hd = -sin(wc*(n - alpha)) ./ (pi*(n - alpha));
+hd(alpha+1) = 1 - wc/pi;
+b = hd .* w;
+%% Frequency response:
+figure(1);
+freqz(b,1,4096,fs);
+title('FIR High-Pass Filter (Kaiser)');
+grid on;
+%% Pole-zero plot:
+a = [1, zeros(1,N)];% all poles are at origin
+figure(2); zplane(b,a); title('Pole-Zero Plot of HPF'); 
+grid on;
+%% Test signal generation (Gaussian white noise)
+rng(0);
+x = randn(fs,1); x = x/max(abs(x));% Normalization
+%% Pass the white noise through Designed LPF:
+y = myFilter_DFI_FIR(b,x);
+%% Spectrum comparison
+Nfft = 8192;
+f = (0:Nfft-1)*fs/Nfft;
+X = fft(x,Nfft);% original signal spectrum
+Y = fft(y,Nfft);% filtered signal spectrum
+epsv = 1e-12;% small value to avoid NaN or Inf
+magX = 20*log10(abs(X)+epsv);
+magY = 20*log10(abs(Y)+epsv);
+figure(3);
+plot(f(1:Nfft/2), magX(1:Nfft/2),'r');
+hold on;
+plot(f(1:Nfft/2), magY(1:Nfft/2),'g');
+xlabel('Frequency (Hz)');
+ylabel('Magnitude (dB)');
+title('Magnitude Spectrum: Input vs Output of HPF');
+legend('Input','Filtered');
+grid on;
+xlim([0 fs/2]);
+%% Direct Form-I FIR Implementation
+% For FIR LPF DF-I becomes linear convolution
+% with length exactly equal to input sequence
+function y = myFilter_DFI_FIR(b,x)
+b = b(:); x = x(:);
+M = length(b); N = length(x);
+y = zeros(N,1);
+for n = 1:N
+    acc = 0;
+    for k = 1:M
+        if (n - k + 1) > 0
+            acc = acc + b(k)*x(n-k+1);
+        end
+    end
+    y(n) = acc;
+end
+end
+

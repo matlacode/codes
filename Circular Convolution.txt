@@ -1,0 +1,94 @@
+% Circular Convolution:
+clearvars;close all; clc;
+x = [1, 2, 3];% input signal
+h = [1, 1];% impulse response
+M = length(h);
+N = length(x);
+L_circ = max(M,N);
+% Zero-Pad the shortest sequence:
+if M>N
+    x = [x, zeros(1, L_circ - N)]; % Zero-pad input signal
+else
+    h = [h, zeros(1, L_circ - M)]; % Zero-pad impulse response
+end
+% Compute the DFT of the sequences:
+X = fft(x); % DFT of input signal
+disp('DFT of input signal X[k]:');
+disp(X);
+
+H = fft(h); % DFT of impulse response
+disp('DFT of impulse response H[k]:');
+disp(H);
+
+% Perform circular convolution in the frequency domain
+Y = X .* H; % Element-wise multiplication of DFTs
+disp('Circular convolution result in frequency domain Y[k]:');
+disp(Y);
+y = ifft(Y); % Inverse DFT to obtain the circular convolution result
+
+% Display the result of the circular convolution
+disp('Circular Convolution Result y[n]:');
+disp(y);
+
+
+
+% Linear Convolution:
+clearvars;close all; clc;
+x = [1, 2, 3];% input signal
+h = [1, 1];% impulse response
+M = length(h);
+N = length(x);
+L_lin = M+N-1;
+% Zero-Pad the input signal:
+xpad = [x,zeros(1,L_lin-N)];
+% Zero-Pad the impulse response:
+hpad = [h, zeros(1, L_lin - M)];
+% Compute the DFT of the sequences:
+Xpad = fft(xpad); % DFT of input signal
+disp('DFT of input signal X[k]:');
+disp(Xpad);
+Hpad = fft(hpad); % DFT of impulse response
+disp('DFT of impulse response H[k]:');
+disp(Hpad);
+% Perform linear convolution in the frequency domain
+Ylin = Xpad .* Hpad; % Element-wise multiplication of DFTs
+disp('Linear convolution result in frequency domain Y[k]:');
+disp(Ylin);
+ylin = ifft(Ylin); % Inverse DFT to obtain the linear convolution result
+% Display the result of the linear convolution
+disp('Linear Convolution Result y[n]:');
+disp(ylin);
+
+% Freqeuncy domain analysis:
+N_DFT = 4096;
+X = fft(x,N_DFT);
+Xmag = abs(X);
+Xmag = Xmag/max(Xmag);% Normalize magnitude
+H = fft(h,N_DFT);
+Hmag = abs(H);
+Hmag = Hmag/max(Hmag);% Normalize magnitude
+Y = fft(ylin,N_DFT);
+Ymag = abs(Y);
+Ymag = Ymag/max(Ymag);
+k = 0:1:N_DFT-1;% Frequency bin
+omega = 2*pi*k/N_DFT;% Normalized Digital frequency 
+
+figure(1),subplot(311),plot(omega,Xmag);
+xlim([0,2*pi]);
+xlabel('Frequency (in \pi rad)');
+ylabel('Magnitude');
+title('Input signal magnitude spectrum |X(\omega)|');
+grid on;
+subplot(312),plot(omega,Hmag);
+xlim([0,2*pi]);
+xlabel('Frequency (in \pi rad)');
+ylabel('Magnitude');
+title('Impulse response magnitude spectrum |H(\omega)|');
+grid on;
+subplot(313),plot(omega,Ymag);
+xlim([0,2*pi]);
+xlabel('Frequency (in \pi rad)');
+ylabel('Magnitude');
+title('Output signal magnitude spectrum |Y(\omega)|');
+grid on;
+

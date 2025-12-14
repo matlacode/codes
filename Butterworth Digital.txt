@@ -1,0 +1,89 @@
+% Exp7 Butterworth Digital (IIR) filter
+clearvars;close all; clc;
+% Frequency specifications:
+fs = 8e3; % sampling rate 8000 Hz
+fpass = 1e3;% PB edge freq 1000 Hz
+fstop = 3e3;% SB edge freq 3000 Hz
+% Analog to digital frequency conversion:
+% normalized digital frequency in rad
+omegap = 2*pi*fpass/fs;% in rad
+omegas = 2*pi*fstop/fs;% in rad
+% Magnitude specifications:
+ap = 2;% Max Passband attenuation in dB
+as = 20;% Min Stopband attenuation in dB
+ 
+% Prewarping the frequencies:
+OMP = 2*tan(omegap/2);% rad/sec
+OMS = 2*tan(omegas/2);% rad/sec
+if(OMS>OMP)
+    filtype = 'low';
+else
+    filtype = 'high';
+end
+[N, OMC] = buttord(OMP, OMS, ap, as, 's');% Estimating the order
+[b1,a1] = butter(N,1,filtype,'s');% Normalized Analog filter TF H(s)
+[b,a] = butter(N,OMC,filtype,'s');% Denormalized Analog filter TF H(s)
+
+% Applying Bilinear Transformation H(z)
+[B,A]=bilinear(b,a,1);
+% Plotting frequency response:
+N_DFT = 2*4096;
+figure(1),
+% freqz(B,A);
+freqz(B,A,N_DFT,fs);
+title('Frequency response of Digital IIR Butterworth Filter');
+grid on;
+% Pole Zero Plot:
+figure(2),pzmap(b1,a1);
+hold on;
+pzmap(b,a);
+hold off;
+title('Pole Zero Plot of Analog IIR Butterworth Filter');
+grid on;
+legend('Normalized','Denormalized');
+[z,p,k] = tf2zp(B,A);
+figure(3),zplane(z,p);
+title('Pole Zero Plot of Digital IIR Butterworth Filter');
+grid on;
+
+% Display the parameters of the analog filter:
+fprintf('Filter type: %spass filter\n',filtype);
+fprintf('Order of the filter: %d\n', N);
+fprintf('Cut-off frequency of the filter: %f rad/sec\n', OMC);
+
+% Not for this AY
+% Performing filtering:
+% t = 2; % duration of the signal
+% x = randn(1,t*fs);
+% y = x;% making the copy of the signal
+% % converting TF to second order sections (SOS)
+% [SOS,G] = tf2sos(B,A);% G is gain
+% steps = size(SOS,1);
+% scale = length(G);
+% for n = 1:steps
+%     y = df2tr(SOS(n,1:3),SOS(n,4:6),y);
+%     if(scale == 1 && n<steps)
+% 
+%     elseif(scale == 1 && n==steps)
+%         y = y*G;
+%     else
+%         y = y*G(n);
+%     end
+% end
+% 
+% % DF-2 transposed structure:
+% function y = df2tr(b,a,x)
+% format long;
+% len = length(x);
+% s1n = 0;
+% s2n = 0;
+% y = zeros(size(x));
+% for n=1:len
+%     % compute output:
+%     y(n) = (x(n)*b(1))+s1n;
+%     % Update states:
+%     s1n = (x(n)*b(2))-(y(n)*a(2))+s2n;
+%     s2n = (x(n)*b(3))-(y(n)*a(3));
+% end
+% end
+
